@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""Convert SVG to JPG. Usage: svg2jpg <file.svg> [file2.svg ...]"""
+
+import sys
+import os
+import io
+
+
+def convert(svg_path: str) -> str:
+    import cairosvg
+    from PIL import Image
+
+    jpg_path = os.path.splitext(svg_path)[0] + ".jpg"
+    png_data = cairosvg.svg2png(url=os.path.abspath(svg_path))
+    img = Image.open(io.BytesIO(png_data)).convert("RGBA")
+    background = Image.new("RGBA", img.size, (255, 255, 255, 255))
+    background.paste(img, mask=img.split()[3])
+    img = background.convert("RGB")
+    img.save(jpg_path, "JPEG", quality=95)
+    return jpg_path
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(f"Usage: {os.path.basename(sys.argv[0])} <file.svg> [...]")
+        sys.exit(1)
+
+    missing = []
+    try:
+        import cairosvg  # noqa: F401
+        from PIL import Image  # noqa: F401
+    except ImportError as e:
+        print(f"Missing dependency: {e}")
+        print("Install: pip install cairosvg pillow")
+        sys.exit(1)
+
+    for path in sys.argv[1:]:
+        if not os.path.isfile(path):
+            missing.append(path)
+            continue
+        out = convert(path)
+        print(out)
+
+    if missing:
+        for p in missing:
+            print(f"not found: {p}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
